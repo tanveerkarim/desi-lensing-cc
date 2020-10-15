@@ -19,6 +19,7 @@ c = 299792.458# km/s
 nside = 16384
 delta_omega = hp.nside2pixarea(nside)
 npix = (hp.nside2npix(nside))
+
 # if downsampling
 nside_out = 4096
 npix_out = (hp.nside2npix(nside_out))
@@ -29,20 +30,22 @@ simname = "/mnt/store/lgarrison/AbacusSummit_base_c000_ph006/lightcones/heal/"
 Lbox = 2000. # Mpc/h
 PPD = 6912
 NP = PPD**3
+
 # particle density in 1/Mpc^3
 n_part = NP/(Lbox/h)**3
 
-# all snapshots and redshifts that have light cones; big to small
+# all snapshots and redshifts that have light cones; early to recent redshifts
 zs_all = np.load("data_headers/redshifts.npy")
-# ordered from small to large; small to big
+
+# ordered from small to large; small step number to large step number
 steps_all = np.load("data_headers/steps.npy")
-# comoving distances in Mpc/h; big to small
+
+# comoving distances in Mpc/h; far shells to close shells
 chis_all = np.load("data_headers/coord_dist.npy")
-# now in Mpc
-chis_all /= h
-# furthest shell is at what time step
+chis_all /= h # Mpc
+
+# furthest and closest shells are at what time step
 step_min = np.min(steps_all)
-# closest shell is at what time step
 step_max = np.max(steps_all)
 
 # location of the observer
@@ -50,8 +53,7 @@ origin = np.array([-990.,-990.,-990.])
 
 # distance from furthest point to observer in Mpc/h
 chi_max = 1.5*Lbox-origin[0]
-# now in Mpc
-chi_max /= h
+chi_max /= h # Mpc
 
 # select the final and initial step for computing the convergence map
 step_start = steps_all[np.argmax((chis_all-chi_max) < 0)]# corresponds to 4000-origin
@@ -61,7 +63,7 @@ step_stop = step_max
 
 # CMB information, computed using CLASS
 z_cmb = 1089.276682
-chi_cmb = 13872.661199427605 
+chi_cmb = 13872.661199427605 # Mpc 
 print("distance to CMB = ",chi_cmb)
 
 # function for extracting the time step from a file name
@@ -83,6 +85,17 @@ for i in range(len(hp_fns)):
 r_s = chi_cmb
 # factor multiplying the standard integral (final answer should be dimensionless)
 prefactor = 3*H0**2*Om_m/(2.*c**2)
+
+'''
+# load mask in nested style (same as native to abacus healpix maps)
+mask_i = np.load("/mnt/store/boryanah/AbacusSummit_base_c000_ph006/lightcones/mask_nested.npy")
+npix_active = np.sum(mask_i)
+print(npix_active)
+
+# percentage of sky covered
+f_sky = npix_active/npix
+print("f_sky [deg^2] = ",f_sky*41253)
+'''
 
 # create empty array that will save our final convergence field
 kappa_i = np.zeros(npix)
@@ -115,28 +128,24 @@ for step in range(step_start,step_stop+1):
     assert (len(choice_fns) <= 3) & (len(choice_fns) > 0), "there can be at most three files in the light cones corresponding to a given step"
 
     # empty map
-    rho_ij = np.zeros(npix)-1
+    rho_ij = np.zeros(npix)
     # loop through those files
     for choice in choice_fns:
         fn = hp_fns[choice]
         print(fn)
         f = asdf.open(fn, lazy_load=True, copy_arrays=True)
         h = f['data']['heal'][:]
+        
         # get number of particles in each pixel
         unique, counts = np.unique(h,return_counts=True)
         rho_ij[unique] += counts
         f.close()
-
-    # percentage of sky covered
-    npix_active = np.sum(rho_ij>-1)
-    f_sky = npix_active/npix
-    print("f_sky [deg^2] = ",f_sky*41253)
     
     # expected number of particles: delta_omega*rj**2 is the area and drj is the depth of each pixel
     dV = (delta_omega*rj**2*drj)
-    # npix_active is how many pixels are occupied in this box (number should be more or less constant and equal to 1600 sq deg tuks)
-    # compute analytically the mean number of particles in all pixels
-    rho_mean = n_part*npix_active*dV
+
+    # compute analytically the mean number of particles per pixel
+    rho_mean = n_part*dV
     
     # the overdensity, lensing kernel and convergence
     delta_ij = rho_ij/rho_mean-1.
@@ -150,5 +159,8 @@ for step in range(step_start,step_stop+1):
 # multiply by the prefactor
 kappa_i *= prefactor
 
+# print max and min of kappa
+#print("min kappa, max kappa = ",np.min(kappa_i[mask_i]),np.max(kappa_i[mask_i]))
+
 # save convergence map
-np.save("/mnt/store/boryanah/AbacusSummit_base_c000_ph006/lightcones/kappa.npy",kappa_i)
+np.save("/mnt/store/boryanah/AbacusSummit_base_c000_ph006/lightcones/kappa_nested.npy",kappa_i)
