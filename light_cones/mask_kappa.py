@@ -51,4 +51,5 @@ mask = mask1 | mask2
 
 print("f_sky [deg^2] = ",np.sum(mask)/len(x_cart)*41253.)
 
-np.save("/mnt/store/boryanah/AbacusSummit_base_c000_ph006/lightcones/mask.npy",mask)
+#np.save("/mnt/store/boryanah/AbacusSummit_base_c000_ph006/lightcones/mask.npy",mask)
+np.save("/global/common/software/desi/users/boryanah/light_cones/mask_ring.npy",mask)
