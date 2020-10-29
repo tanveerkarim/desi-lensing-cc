@@ -7,7 +7,7 @@ import glob
 import gc
 import time
 from scipy.interpolate import interp1d
-from classy import Class
+#from classy import Class
 
 # cosmological parameters
 h = 0.6736
@@ -26,7 +26,8 @@ npix_out = (hp.nside2npix(nside_out))
 delta_omega_out = hp.nside2pixarea(nside_out)
 
 # simulation name
-simname = "/mnt/store/lgarrison/AbacusSummit_base_c000_ph006/lightcones/heal/"
+sim_name = "AbacusSummit_base_c000_ph006"
+simname = "/global/project/projectdirs/desi/cosmosim/Abacus/"+sim_name+"/lightcones/heal/"#"/mnt/store/lgarrison/AbacusSummit_base_c000_ph006/lightcones/heal/"
 Lbox = 2000. # Mpc/h
 PPD = 6912
 NP = PPD**3
