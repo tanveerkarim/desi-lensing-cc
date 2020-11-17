@@ -19,7 +19,7 @@ def is_in_cube(x_pos,y_pos,z_pos,verts):
     
     return mask
         
-nside = 16384
+nside = 2048#16384
 npix = hp.nside2npix(nside)
 ipix = np.arange(npix)
 x_cart, y_cart, z_cart = hp.pix2vec(nside, ipix)
@@ -51,5 +51,5 @@ mask = mask1 | mask2
 
 print("f_sky [deg^2] = ",np.sum(mask)/len(x_cart)*41253.)
 
-#np.save("/mnt/store/boryanah/AbacusSummit_base_c000_ph006/lightcones/mask.npy",mask)
-np.save("/global/common/software/desi/users/boryanah/light_cones/mask_ring.npy",mask)
+np.save("/mnt/store1/boryanah/AbacusSummit_base_c000_ph006/light_cones/mask_ring_%d.npy"%nside,mask)
+#np.save("/global/common/software/desi/users/boryanah/light_cones/mask_ring_%d.npy"%nside,mask)
