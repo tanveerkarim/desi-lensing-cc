@@ -3,38 +3,12 @@ import glob
 
 import numpy as np
 import healpy as hp
+import matplotlib.pyplot as plt
 
 from scipy.interpolate import interp1d
+from tools import *
 
-def load_gals(fns,dim):    
-
-    for fn in fns:
-        tmp_arr = np.fromfile(fn).reshape(-1,dim)
-        try:
-            gal_arr = np.vstack((gal_arr,tmp_arr))
-        except:
-            gal_arr = tmp_arr
-            
-    return gal_arr
-
-def get_vertices_cube(units=0.5,N=3):
-    vertices = 2*((np.arange(2**N)[:,None] & (1 << np.arange(N))) > 0) - 1
-    return vertices*units
-
-def is_in_cube(x_pos,y_pos,z_pos,verts):
-    x_min = np.min(verts[:,0])
-    x_max = np.max(verts[:,0])
-    y_min = np.min(verts[:,1])
-    y_max = np.max(verts[:,1])
-    z_min = np.min(verts[:,2])
-    z_max = np.max(verts[:,2])
-
-    mask = (x_pos > x_min) & (x_pos <= x_max) & (y_pos > y_min) & (y_pos <= y_max) & (z_pos > z_min) & (z_pos <= z_max)
-
-    print("f_sky [deg^2] = ",np.sum(mask)/len(x_pos)*41253.)
-    
-    return mask
-
+np.random.seed(300)
 
 # all redshifts, steps and comoving distances of light cones files; high z to low z
 zs_all = np.load("data_headers/redshifts.npy")
@@ -45,79 +19,113 @@ zs_all[-1] = np.float('%.1f'%zs_all[-1])
 chi_of_z = interp1d(zs_all,chis_all)
 z_of_chi = interp1d(chis_all,zs_all)
 
-# galaxy location
-hod_dir = "/mnt/gosling1/boryanah/light_cone_catalog/AbacusSummit_base_c000_ph006/HOD/"
-all_zs = sorted(glob.glob(os.path.join(hod_dir, "z*")))
-model_no = 'model_6'
 
-gals_fns = []
-for i in range(len(all_zs)):
-    z = float(all_zs[i].split('/z')[-1])
+def gen_rand(N_gals, gals_chis, fac=60, Lbox=2000., remove_edges=False, box_offset=True, origin=np.array([-990, -990, -990])):
+    # number of randoms to generate is 8 times (octant) times number of galaxies
+    #fac = 4*15 # 4 because we are doing upper half
+    N_rands = fac*N_gals
 
-    #if z > 1.6 or z < 0.8: continue
-    #if z > 0.8: continue
-    print(z)    
-    gals_fns.append(os.path.join(all_zs[i], model_no, 'halos_gal_sats'))
-    gals_fns.append(os.path.join(all_zs[i], model_no, 'halos_gal_cent'))
+    # generate randoms on the unit sphere (should be simple since theta and phi are arbitrary)
+    #costheta = np.random.rand(N_rands)*2-1.
+    #phi = np.random.rand(N_rands)*2*np.pi
+    costheta = np.random.rand(N_rands)*1.01-0.01
+    phi = np.random.rand(N_rands)*2*np.pi#np.pi/2.
+    theta = np.arccos(costheta)
+    x_cart = np.sin(theta)*np.cos(phi)
+    y_cart = np.sin(theta)*np.sin(phi)
+    z_cart = np.cos(theta)
 
-# load the galaxies: centrals and satellites
-gals_arr = load_gals(gals_fns,dim=9)
-gals_zs = gals_arr[:, -3]
-mask = gals_zs > 0.
-gals_pos = gals_arr[mask, 0:3]
-gals_zs = gals_zs[mask]
-print("redshift range = ", gals_zs.min(), gals_zs.max())
-gals_chis = chi_of_z(gals_zs)
-N_gals = len(gals_chis)
+    # perhaps can only generate in the first octant
 
-# number of randoms to generate is 8 times (octant) times number of galaxies
-fac = 8*15
-N_rands = fac*N_gals
+    # get the redshifts/chis of the galaxies
+    rands_chis = np.repeat(gals_chis, fac)
 
-# generate randoms on the unit sphere (should be simple since theta and phi are arbitrary)
-costheta = np.random.rand(N_rands)*2-1.
-phi = np.random.rand(N_rands)*2*np.pi
-theta = np.arccos(costheta)
-x_cart = np.sin(theta)*np.cos(phi)
-y_cart = np.sin(theta)*np.sin(phi)
-z_cart = np.cos(theta)
+    # multiply the unit vectors by that
+    x_cart *= rands_chis
+    y_cart *= rands_chis
+    z_cart *= rands_chis
+    print(np.min(rands_chis), np.max(rands_chis))
+    chi_cart = rands_chis
 
-# perhaps can only generate in the first octant
+    # box size
+    #Lbox = 2000.# Mpc/h
 
-# get the redshifts/chis of the galaxies
-rands_chis = np.repeat(gals_chis, fac)
+    # location of the observer relative to box centered
+    #origin = np.array([-990,-990,-990])
+    
+    # vector between centers of the cubes and origin in Mpc/h (i.e. placing observer at 0, 0, 0)
+    box0 = np.array([0., 0., 0.])-origin
+    box1 = np.array([0., 0., Lbox])-origin
+    box2 = np.array([0., Lbox, 0.])-origin
+    
+    # vertices of a cube centered at 0, 0, 0
+    vert = get_vertices_cube(units=Lbox/2.)
+    print(vert)
 
-# multiply the unit vectors by that
-x_cart *= rands_chis
-y_cart *= rands_chis
-z_cart *= rands_chis
+    if remove_edges:
+        # tuks think about it more but TESTING    
+        x_vert = vert[:, 0]
+        y_vert = vert[:, 1]
+        z_vert = vert[:, 2]
+        vert[x_vert < 0, 0] += 10.
+        vert[x_vert > 0, 0] -= 10.
+        vert[y_vert < 0, 1] += 10.
+        vert[z_vert < 0, 2] += 10.
+    
+    # vertices for all three boxes
+    vert0 = box0+vert
+    vert1 = box1+vert
+    vert2 = box2+vert
 
-# box size
-Lbox = 2000.# Mpc/h
+    # mask for whether or not the coordinates are within the vertices
+    mask0 = is_in_cube(x_cart, y_cart, z_cart, vert0)
+    mask1 = is_in_cube(x_cart, y_cart, z_cart, vert1)
+    mask2 = is_in_cube(x_cart, y_cart, z_cart, vert2)
+    mask = mask0 | mask1 | mask2
+    print("masked randoms = ", np.sum(mask)*100./len(mask))
 
-# location of the observer
-origin = np.array([-990,-990,-990])
+    rands_pos = np.vstack((x_cart[mask], y_cart[mask], z_cart[mask], chi_cart[mask])).T
 
-# centers of the cubes in Mpc/h
-box0 = np.array([0.,0.,0.])-origin
-box1 = np.array([0.,0.,2000.])-origin
-box2 = np.array([0.,2000.,0.])-origin
+    
+    rands_pos[:, :3] += origin
+    if box_offset:
+        rands_pos[:, :3] += Lbox/2.
+    
+    return rands_pos
 
-# vertices of a cube centered at 0, 0, 0
-vert = get_vertices_cube(units=Lbox/2.)
-print(vert)
 
-# vertices for all three boxes
-vert0 = box0+vert
-vert1 = box1+vert
-vert2 = box2+vert
+def main():
 
-# mask for whether or not the coordinates are within the vertices
-mask0 = is_in_cube(x_cart, y_cart, z_cart, vert0)
-mask1 = is_in_cube(x_cart, y_cart, z_cart, vert1)
-mask2 = is_in_cube(x_cart, y_cart, z_cart, vert2)
-mask = mask0 | mask1 | mask2
-print("masked randoms = ", np.sum(mask)*100./len(mask))
+    # galaxy location
+    hod_dir = "/mnt/gosling1/boryanah/light_cone_catalog/AbacusSummit_base_c000_ph006/HOD/"
+    all_zs = sorted(glob.glob(os.path.join(hod_dir, "z*")))
+    model_no = 'model_6'
 
-rands_pos = np.vstack((x_cart[mask], y_cart[mask], z_cart[mask])).T
-np.save("/mnt/gosling1/boryanah/light_cone_catalog/AbacusSummit_base_c000_ph006/products/randoms.npy", rands_pos)
+    gals_fns = []
+    for i in range(len(all_zs)):
+        z = float(all_zs[i].split('/z')[-1])
+
+        #if z > 1.6 or z < 0.8: continue
+        #if z > 0.8: continue
+        print(z)    
+        gals_fns.append(os.path.join(all_zs[i], model_no, 'halos_gal_sats'))
+        gals_fns.append(os.path.join(all_zs[i], model_no, 'halos_gal_cent'))
+
+    # load the galaxies: centrals and satellites
+    gals_arr = load_gals(gals_fns,dim=9)
+    gals_zs = gals_arr[:, -3]
+    print("redshift range = ", gals_zs.min(), gals_zs.max())
+
+    # downsampled NEW
+    gals_down = np.load("/mnt/gosling1/boryanah/light_cone_catalog/AbacusSummit_base_c000_ph006/products/gals_down_"+model_no+".npy")
+    gals_pos = gals_down[:, :3]
+    gals_zs = gals_down[:, -1]
+
+    # better not cause actually particles come from specific galaxies are moved by Lbox/2
+    gals_norm, gals_chis, min_gals, max_gals = get_norm(gals_pos, np.array([10., 10., 10.]))
+    #gals_chis = chi_of_z(gals_zs)
+    N_gals = len(gals_chis)
+
+    rands_pos = gen_rand(N_gals, gals_chis)
+    #np.save("/mnt/gosling1/boryanah/light_cone_catalog/AbacusSummit_base_c000_ph006/products/randoms.npy", rands_pos)
+

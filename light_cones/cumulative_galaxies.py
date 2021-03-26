@@ -5,8 +5,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import healpy as hp
 
-model_no = 'model_6'
+from scipy.interpolate import interp1d
+
+from tools import *
+
+model_no = 'model_7'
 nside = 4096
+
+
+# all redshifts, steps and comoving distances of light cones files; high z to low z
+zs_all = np.load("data_headers/redshifts.npy")
+chis_all = np.load("data_headers/coord_dist.npy")
+zs_all[-1] = np.float('%.1f'%zs_all[-1])
+
+# get functions relating chi and z
+chi_of_z = interp1d(zs_all,chis_all)
+z_of_chi = interp1d(chis_all,zs_all)
 
 # location of the galaxy catalogs
 #hod_dir = "/mnt/gosling1/tkarim/light_cone_catalog/AbacusSummit_base_c000_ph006_cleaned/"
@@ -33,29 +47,6 @@ print(len(all_zs))
 # location of the observer
 origin = np.array([10., 10., 10.])
 
-def get_norm(gals_pos, origin):
-    gals_norm = gals_pos - origin
-    vec_size = np.sqrt(np.sum((gals_norm)**2, axis=1))
-    gals_norm /= vec_size[:, None]
-    min_dist = np.min(vec_size)
-    max_dist = np.max(vec_size)
-    print("min dist = ", min_dist)
-    print("max dist = ", max_dist)
-    return gals_norm, vec_size, min_dist, max_dist
-
-
-def load_gals(fns,dim):    
-
-    for fn in fns:
-        tmp_arr = np.fromfile(fn).reshape(-1,dim)
-        try:
-            gal_arr = np.vstack((gal_arr,tmp_arr))
-        except:
-            gal_arr = tmp_arr
-            
-    return gal_arr
-
-
 cent_fns = []
 sats_fns = []
 gals_fns = []
@@ -70,37 +61,24 @@ for i in range(len(all_zs)):
     
     gals_fns.append(os.path.join(all_zs[i], model_no, 'halos_gal_sats'))
     gals_fns.append(os.path.join(all_zs[i], model_no, 'halos_gal_cent'))
-    
+
+
+# START COMMENT if want radoms or downsampled
+'''
 # centrals and satellites
 #gals_arr = load_gals(gals_fns,dim=9)
 #gals_pos = gals_arr[:, 0:3]
 
-# og
 # if want to break into centrals and satellites
 cent_arr = load_gals(cent_fns,dim=9)
 sats_arr = load_gals(sats_fns,dim=9)
 gals_mhalo = cent_arr[:, -1]
 
-
-# trying to clean the satellites that were not found (praying to the gods)
-sats_zs = sats_arr[:, -3]
-mask = sats_zs > 0.
-sats_arr = sats_arr[mask]
-print("percentage of not found satellites = ", np.sum(mask)*100/len(mask))
-
-# and the really huge halos
-sats_mhalo = sats_arr[:, -1]
-mask = sats_mhalo < 1.e18
-huge_inds = sats_arr[sats_mhalo > 9.e18, -2].astype(int)
-#print(np.unique(huge_inds))
-print(sats_arr[sats_mhalo > 9.e18][:100])
-print("index of weird halo = ", np.sum(sats_mhalo > 1.e18))
-sats_arr = sats_arr[mask]
-print("percentage of satellites living in unphysical halos = ", np.sum(mask)*100/len(mask))
-
+# centrals and satellites position
 cent_pos = cent_arr[:, 0:3]
 sats_pos = sats_arr[:, 0:3]
 
+# compute the distance to the observer and unit vector
 cent_norm, vec_cent, min_cent, max_cent = get_norm(cent_pos, origin)
 sats_norm, vec_sats, min_sats, max_sats = get_norm(sats_pos, origin)
 print("max_cent/sats = ", max_cent, max_sats)
@@ -112,12 +90,21 @@ cent_pos = cent_pos[vec_cent < max_sats]
 
 # stacking the normalized centrals and satellites
 gals_norm = np.vstack((cent_norm, sats_norm))
+'''
+# END COMMENT if want radoms or downsampled
 
-'''
-# TESTING with randoms
-gals_pos = np.load("/mnt/gosling1/boryanah/light_cone_catalog/AbacusSummit_base_c000_ph006/products/randoms.npy")
+# randoms or downsampled
+randoms = 0
+if randoms:
+    gals_arr = np.load("/mnt/gosling1/boryanah/light_cone_catalog/AbacusSummit_base_c000_ph006/products/randoms.npy")
+else:
+    gals_arr = np.load("/mnt/gosling1/boryanah/light_cone_catalog/AbacusSummit_base_c000_ph006/products/gals_down_"+model_no+".npy")
+gals_pos = gals_arr[:, :3]
+gals_zs = gals_arr[:, -1]
 gals_norm, vec_gals, min_gals, max_gals = get_norm(gals_pos, origin)
-'''
+
+# if want chi instead of distance (particles take the light cone shell values)
+#vec_gals = chi_of_z(gals_zs)
 
 want_show = 0
 if want_show:
@@ -150,17 +137,23 @@ if want_show:
 
 want_show = 0
 if want_show:
-    vec_size = np.hstack((vec_cent, vec_sats))
+    #vec_gals = np.hstack((vec_cent, vec_sats))
+    #min_gals = 1260
+    #max_gals = 1450
+    num = 2001
     
-    bins = np.linspace(min_cent, max_cent, 1000)
-    hist, bins = np.histogram(vec_size, bins=bins)
+    bins = np.linspace(min_gals, max_gals, num)
+    hist, bins = np.histogram(vec_gals, bins=bins)
 
     bin_cents = (bins[1:] + bins[:-1])*0.5
     plt.plot(bin_cents, hist/bin_cents**2)
     plt.show()
 
     np.save("data/bin_cents.npy", bin_cents)
-    np.save("data/hist.npy", hist/bin_cents**2)
+    if randoms:
+        np.save("data/hist_rand.npy", hist/bin_cents**2)
+    else:
+        np.save("data/hist.npy", hist/bin_cents**2)
     quit()
     
 x = gals_norm[:, 0]
