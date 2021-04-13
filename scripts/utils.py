@@ -1,6 +1,7 @@
 """This file contains all the utility functions"""
 
 import itertools
+import numpy as np
 
 def bin_mat(r=[],mat=[],r_bins=[]):
     """Sukhdeep's Code to bins data and covariance arrays
@@ -59,7 +60,7 @@ def bin_mat(r=[],mat=[],r_bins=[]):
         norm_int[indxs]=norm_ijk
     return bin_center,mat_int
 
-def plot_powerspectra(cls, fields, ELL_min = lmin, ELL_max = lmax, **kwargs):
+def plot_powerspectra(cls, fields, ELL_min, ELL_max, **kwargs):
     """Calculates power spectra using anafast and produces plots against theory
 
     Input
