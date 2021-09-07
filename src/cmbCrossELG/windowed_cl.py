@@ -74,7 +74,7 @@ def zbin_pz_norm(ztomo_bins_dict={},tomo_bin_indx=None,zbin_centre=None,p_zspec=
     
     #convert k to ell
     zm=np.sum(ztomo_bins_dict[i]['z']*ztomo_bins_dict[i]['pzdz'])/ztomo_bins_dict[i]['Norm']
-    ztomo_bins_dict[i]['lm']=k_max*cosmo_h.comoving_transverse_distance(zm).value 
+    #ztomo_bins_dict[i]['lm']=k_max*cosmo_h.comoving_transverse_distance(zm).value #not being used at the moment; if needed, talk to Sukhdeep 
     return ztomo_bins_dict
 
 def source_tomo_bins(zphoto_bin_centre=None,p_zphoto=None,ntomo_bins=None,ns=26,
