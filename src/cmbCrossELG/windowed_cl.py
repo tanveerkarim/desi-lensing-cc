@@ -1,6 +1,7 @@
 __all__ = ["set_window_here", "zbin_pz_norm", "source_tomo_bins", "DESI_elg_bins"]
 
 import pandas as pd
+import numpy as np
 
 def set_window_here(ztomo_bins_dict={}, nside=1024, mask = None, unit_win=False, cmb=False):
     """
@@ -160,7 +161,7 @@ def DESI_elg_bins(ntomo_bins=1, f_sky=0.3,nside=256,use_window=True, bg1=1,
     fname='nz_blanc+abacus.txt'
 #     t=np.genfromtxt(home+fname,names=True,skip_header=3)
     #t=np.genfromtxt(home+fname,names=True)
-    t = read_csv(home + fname)
+    t = pd.read_csv(home + fname)
     dz=t['Redshift_mid'][2]-t['Redshift_mid'][1]
     zmax=max(t['Redshift_mid'])+dz/2
     zmin=min(t['Redshift_mid'])-dz/2
