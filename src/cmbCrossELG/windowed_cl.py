@@ -2,6 +2,7 @@ __all__ = ["set_window_here", "zbin_pz_norm", "source_tomo_bins", "DESI_elg_bins
 
 import pandas as pd
 import numpy as np
+from skylens import *
 
 def set_window_here(ztomo_bins_dict={}, nside=1024, mask = None, unit_win=False, cmb=False):
     """

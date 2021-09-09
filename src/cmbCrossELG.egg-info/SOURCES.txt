@@ -25,7 +25,16 @@ notebooks/namaster_ccl.ipynb
 notebooks/systematic-tests.ipynb
 notebooks/validate_ccl.ipynb
 plots/DESI_Planck_Jackknife.png
+src/dataAnalysis.py
+src/quick_mock.py
+src/skylens_theory.py.ipynb
+src/untitled.txt
+src/utils.py
+src/__pycache__/utils.cpython-38.pyc
+src/cmbCrossELG/__ini__.py
+src/cmbCrossELG/windowed_cl.py
 src/cmbCrossELG.egg-info/PKG-INFO
 src/cmbCrossELG.egg-info/SOURCES.txt
 src/cmbCrossELG.egg-info/dependency_links.txt
 src/cmbCrossELG.egg-info/top_level.txt
+src/cmbCrossELG/__pycache__/windowed_cl.cpython-38.pyc
