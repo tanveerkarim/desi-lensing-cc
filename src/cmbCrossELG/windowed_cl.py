@@ -155,7 +155,7 @@ def source_tomo_bins(zphoto_bin_centre=None,p_zphoto=None,ntomo_bins=None,ns=26,
         ztomo_bins_dict=set_window_here(ztomo_bins_dict=ztomo_bins_dict,nside=nside, unit_win=False)
     return ztomo_bins_dict
 
-def cmb_bins_here(zs=1090,l=None,use_window=use_window,unit_win=False,nside=1024,zmax=2.45):
+def cmb_bins_here(zs=1090,l=None,use_window=True,unit_win=False,nside=1024,zmax=2.45):
     """
     unit_win = boolean mask 
     nside = 2048; same as sims
