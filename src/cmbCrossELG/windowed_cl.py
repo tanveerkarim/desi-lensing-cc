@@ -17,9 +17,9 @@ def set_window_here(ztomo_bins_dict={}, nside=1024, mask = None, unit_win=False,
         elif cmb:
             #cl_map=np.load('/mnt/store1/tkarim/mask_2048.fits') #FIXME: add the CMB lensing window here.
             #window_map=np.load("/mnt/store1/boryanah/AbacusSummit_base_c000_ph006/light_cones/mask_edges_ring_2048.npy")
-            #window_map=np.load("/home/tkarim/imaging-sys-covariance/dat/windows/Favg/Favg_map_unpickled.npy")
+            window_map=np.load("/home/tkarim/desi-lensing-cc/dat/planck-lensing-mask-eq-1024.npy")
             #window_map = window_map.astype(np.float64)
-            #window_map_noise = window_map
+            window_map_noise = window_map
             #mask = cl_map
             print("cmb")
         else:
